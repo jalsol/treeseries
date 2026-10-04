@@ -1,0 +1,45 @@
+# Baseline: every build.
+build --cxxopt=-std=c++26
+build --copt=-fno-omit-frame-pointer
+build --linkopt=-Wl,--build-id=sha1
+build --verbose_failures
+test --test_output=errors
+common --enable_platform_specific_config
+
+# Warnings apply to our sources only. Third-party deps are not ours to fix, and
+# --copt would drag them into catch2's build. Paths here are exec-root-relative.
+build --per_file_copt=^treeseries/.*@-Wall,-Wextra,-Wpedantic,-Wshadow
+build --per_file_copt=^treeseries/.*@-Wnon-virtual-dtor,-Wold-style-cast,-Wcast-align,-Wformat=2
+build --per_file_copt=^treeseries/.*@-Wimplicit-fallthrough,-Wnull-dereference,-Woverloaded-virtual
+build --per_file_copt=^treeseries/.*@-Wdouble-promotion,-Wconversion,-Wsign-conversion
+
+# Platform-specific hardening (ELF).
+build:linux --copt=-fstack-protector-strong --copt=-fstack-clash-protection
+build:linux --linkopt=-Wl,-z,relro,-z,now,-z,noexecstack
+
+# GCC-only warnings; keep out of the baseline so clang builds don't choke.
+build:gcc --per_file_copt=^treeseries/.*@-Wduplicated-cond,-Wduplicated-branches,-Wlogical-op,-Wuseless-cast
+
+# ---- configs ---------------------------------------------------------------
+# bazel test --config=release //...   -- the artifact to benchmark and ship
+build:release --compilation_mode=opt
+# -U first: distros that pre-define _FORTIFY_SOURCE would otherwise warn.
+build:release --copt=-U_FORTIFY_SOURCE --copt=-D_FORTIFY_SOURCE=3
+build:release --strip=never
+# No -flto here: this box links with ld.lld, which has no LLVMgold plugin, so
+# GCC's slim-LTO archives lose symbols (and GNU ld segfaults on them). Revisit
+# with --features=thin_lto under clang once there is something worth inlining.
+
+# bazel test --config=ci //...
+build:ci --config=release
+build:ci --per_file_copt=^treeseries/.*@-Werror
+build:ci --lockfile_mode=error
+
+# bazel test --config=native //...    -- benchmark numbers only; shipped
+# artifacts stay portable (no -march=native outside this config)
+build:native --copt=-march=native
+
+# bazel test --config=asan //...
+build:asan --copt=-fsanitize=address --copt=-fno-omit-frame-pointer --linkopt=-fsanitize=address
+# bazel test --config=ubsan //...
+build:ubsan --copt=-fsanitize=undefined --copt=-fno-sanitize-recover=all --linkopt=-fsanitize=undefined

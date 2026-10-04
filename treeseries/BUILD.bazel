@@ -1,0 +1,8 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+# Umbrella target: one name to depend on, so consumers don't track subpackages.
+cc_library(
+    name = "treeseries",
+    visibility = ["//visibility:public"],
+    deps = ["//treeseries/slab"],
+)

@@ -1,0 +1,3 @@
+# Google style; "Latest" so C++26 syntax isn't parsed as an older standard.
+BasedOnStyle: Google
+Standard: Latest
