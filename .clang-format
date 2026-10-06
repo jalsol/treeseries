@@ -1,3 +1,5 @@
 # Google style; "Latest" so C++26 syntax isn't parsed as an older standard.
 BasedOnStyle: Google
 Standard: Latest
+# Google style's 80 is too narrow for this codebase.
+ColumnLimit: 120
