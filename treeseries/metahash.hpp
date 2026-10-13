@@ -6,15 +6,17 @@
 #include "treeseries/slab.hpp"
 
 struct MetaHash {
-  static constexpr auto kMetaHashRows = 100uz;
-  static constexpr auto kMetaHashCols = 10000uz;
+  static constexpr auto kMetaHashRows = 1uz << 5;
+  static constexpr auto kMetaHashCols = 1uz << 11;
 
   struct Item {
     mutable std::mutex mutex;
     SlabId slab_id = SlabId::kInvalid;
   };
 
-  Item& Get(auto i, auto j) { return table[i][j]; }
+  Item& GetItemFor(auto metric_id, auto source_id) {
+    return table[metric_id % kMetaHashRows][source_id % kMetaHashCols];
+  }
 
   std::array<std::array<Item, kMetaHashCols>, kMetaHashRows> table;
 };

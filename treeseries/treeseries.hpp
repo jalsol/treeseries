@@ -3,7 +3,9 @@
 #include <sys/mman.h>
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <memory>
 #include <span>
 #include <stdexcept>
 #include <vector>
@@ -17,7 +19,8 @@ class TreeSeries {
  public:
   TreeSeries()
       : slab_buffer_{static_cast<std::byte*>(::mmap(nullptr, kSlabBufferSize, PROT_READ | PROT_WRITE,
-                                                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE, -1, 0))} {
+                                                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE, -1, 0))},
+        meta_hash_{std::make_unique<MetaHash>()} {
     if (slab_buffer_ == MAP_FAILED) {
       throw std::runtime_error("TreeSeries: Cannot mmap.");
     }
@@ -32,12 +35,10 @@ class TreeSeries {
     }
   }
 
-  auto Put(std::uint64_t, std::uint16_t metric_id, std::span<std::byte>) {
-    const auto i = metric_id % MetaHash::kMetaHashRows;
-    const auto j = metric_id % MetaHash::kMetaHashCols;
-    auto& item = meta_hash_.Get(i, j);
-
+  auto Put(std::uint64_t source_id, std::uint16_t metric_id, std::span<std::byte>) {
+    auto& item = meta_hash_->GetItemFor(metric_id, source_id);
     std::scoped_lock lock(item.mutex);
+
     if (item.slab_id == SlabId::kInvalid) {
       // TODO
     }
@@ -52,5 +53,5 @@ class TreeSeries {
 
  private:
   std::byte* slab_buffer_;
-  MetaHash meta_hash_;
+  std::unique_ptr<MetaHash> meta_hash_;
 };
