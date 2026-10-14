@@ -66,7 +66,7 @@ TEST_CASE("DiskFreeQueue allocations map onto writable file space", "[disk_free_
     REQUIRE(run->first == 0U);
 
     const auto slab = queue.Slab(run->first + kSlot);
-    std::fill(slab.begin(), slab.end(), std::byte{0x3C});
+    std::ranges::fill(slab, std::byte{0x3C});
     file.Sync(run->first + kSlot, 1U);
   }
 

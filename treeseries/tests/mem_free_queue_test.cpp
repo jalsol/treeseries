@@ -2,10 +2,11 @@
 
 #include <algorithm>
 #include <array>
-#include <barrier>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <latch>
+#include <ranges>
 #include <thread>
 #include <vector>
 
@@ -18,11 +19,7 @@ TEST_CASE("MemFreeQueue drains in order and stays exhausted", "[mem_free_queue]"
     ids.push_back(*id);
   }
 
-  REQUIRE(ids.size() == kMemSlabCount);
-  REQUIRE(ids.front() == 0U);
-  REQUIRE(ids.back() == kMemSlabCount - 1U);
-  REQUIRE(std::is_sorted(ids.begin(), ids.end()));
-  REQUIRE(std::adjacent_find(ids.begin(), ids.end()) == ids.end());
+  REQUIRE(std::ranges::equal(ids, std::views::iota(0U, kMemSlabCount)));
   REQUIRE(queue.Remaining() == 0U);
   REQUIRE_FALSE(queue.TryPop().has_value());
 }
@@ -77,7 +74,7 @@ TEST_CASE("MemFreeQueue issues no duplicates under concurrent pops", "[mem_free_
   constexpr auto kThreads = 8U;
 
   MemFreeQueue queue;
-  std::barrier start{static_cast<std::ptrdiff_t>(kThreads)};
+  std::latch start{static_cast<std::ptrdiff_t>(kThreads)};
   std::array<std::vector<std::uint32_t>, kThreads> per_thread;
   std::array<std::thread, kThreads> threads;
 
@@ -95,15 +92,7 @@ TEST_CASE("MemFreeQueue issues no duplicates under concurrent pops", "[mem_free_
     thread.join();
   }
 
-  std::vector<std::uint32_t> all;
-  all.reserve(kMemSlabCount);
-  for (const auto& ids : per_thread) {
-    all.insert(all.end(), ids.begin(), ids.end());
-  }
-
-  REQUIRE(all.size() == kMemSlabCount);
-  std::sort(all.begin(), all.end());
-  REQUIRE(all.front() == 0U);
-  REQUIRE(all.back() == kMemSlabCount - 1U);
-  REQUIRE(std::adjacent_find(all.begin(), all.end()) == all.end());
+  auto all = per_thread | std::views::join | std::ranges::to<std::vector>();
+  std::ranges::sort(all);
+  REQUIRE(std::ranges::equal(all, std::views::iota(0U, kMemSlabCount)));
 }

@@ -38,7 +38,7 @@ TEST_CASE("SlabFile survives a reopen with contents intact", "[slab_file]") {
   {
     auto file = SlabFile::Create(path);
     const auto slab = file.Slab(kSlot);
-    std::fill(slab.begin(), slab.end(), std::byte{0x5A});
+    std::ranges::fill(slab, std::byte{0x5A});
     file.Sync(kSlot, 1U);
   }
 

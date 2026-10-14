@@ -19,7 +19,7 @@ struct Item {
 static_assert(sizeof(Item) == kItemSize, "Item size mismatched");
 
 struct Slab {
-  Item items[kSlabSize / kItemSize];
+  std::array<Item, kItemsPerSlab> items;
 };
 
 static_assert(sizeof(Slab) == kSlabSize, "Slab size mismatched");

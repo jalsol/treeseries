@@ -63,7 +63,7 @@ class SlabFile {
   SlabFile& operator=(const SlabFile&) = delete;
 
   ~SlabFile() {
-    if (mapping_ != nullptr && ::munmap(mapping_, kSlabFileSize) == -1) {
+    if (::munmap(mapping_.data(), mapping_.size()) == -1) {
       std::fprintf(stderr, "SlabFile: Cannot munmap: %s\n", std::strerror(errno));
     }
     if (fd_ != -1) {
@@ -72,7 +72,7 @@ class SlabFile {
   }
 
   [[nodiscard]] auto Slab(std::uint32_t id) const -> std::span<std::byte, kSlabSize> {
-    return std::span<std::byte, kSlabSize>{mapping_ + id * kSlabSize, kSlabSize};
+    return std::span<std::byte, kSlabSize>{mapping_.subspan(id * kSlabSize, kSlabSize)};
   }
 
   void Sync(std::uint32_t first, std::uint32_t count) const {
@@ -80,14 +80,14 @@ class SlabFile {
       return;
     }
 
-    const auto offset = first * kSlabSize;
-    if (::msync(mapping_ + offset, count * kSlabSize, MS_SYNC) == -1) {
+    const auto run = mapping_.subspan(first * kSlabSize, count * kSlabSize);
+    if (::msync(run.data(), run.size(), MS_SYNC) == -1) {
       throw std::runtime_error(std::format("SlabFile: Cannot msync: {}", std::strerror(errno)));
     }
   }
 
  private:
-  SlabFile(int fd, std::byte* mapping) : fd_{fd}, mapping_{mapping} {}
+  SlabFile(int fd, std::byte* mapping) : fd_{fd}, mapping_{mapping, kSlabFileSize} {}
 
   [[nodiscard]] static auto Map(int fd, const std::string& path) -> SlabFile {
     auto* mapping = static_cast<std::byte*>(
@@ -103,5 +103,5 @@ class SlabFile {
   }
 
   int fd_ = -1;
-  std::byte* mapping_ = nullptr;
+  std::span<std::byte, kSlabFileSize> mapping_;
 };

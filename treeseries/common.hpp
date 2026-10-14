@@ -7,8 +7,9 @@ constexpr auto kItemSize = 256uz;
 constexpr auto kMetricIdSize = 2uz;
 constexpr auto kSourceIdSize = 8uz;
 constexpr auto kChunkSize = kItemSize - kSourceIdSize - kMetricIdSize;
+constexpr auto kItemsPerSlab = kSlabSize / kItemSize;
 
-static_assert(kSlabSize % kItemSize == 0, "Slab size isn't divisible by item size");
+static_assert(kSlabSize == kItemsPerSlab * kItemSize, "Slab size isn't a whole number of items");
 
 constexpr auto GB = 1024uz * 1024 * 1024;
 constexpr auto kSlabBufferSize = 2 * GB;

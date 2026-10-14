@@ -21,12 +21,12 @@ using timestamp = std::uint64_t;
 
 class TreeSeries {
  public:
-  explicit TreeSeries(SlabFile& slab_file) : TreeSeries{slab_file, 0} {}
+  explicit TreeSeries(SlabFile* slab_file) : TreeSeries{slab_file, 0} {}
 
-  TreeSeries(SlabFile& slab_file, std::uint32_t first_free)
+  TreeSeries(SlabFile* slab_file, std::uint32_t first_free)
       : slab_buffer_{MapBuffer()},
-        slab_file_{slab_file},
-        disk_free_queue_{DiskFreeQueue::Restored(slab_file, first_free)},
+        slab_file_{*slab_file},
+        disk_free_queue_{DiskFreeQueue::Restored(*slab_file, first_free)},
         meta_hash_{std::make_unique<MetaHash>()} {}
 
   TreeSeries(const TreeSeries&) = delete;
