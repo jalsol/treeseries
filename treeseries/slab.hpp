@@ -6,7 +6,7 @@
 
 #include "treeseries/common.hpp"
 
-enum SlabId : int64_t { kInvalid = -1 };
+enum SlabId : std::uint32_t { kInvalid = UINT32_MAX };
 
 using Chunk = std::array<std::byte, kChunkSize>;
 

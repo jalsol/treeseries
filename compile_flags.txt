@@ -1,2 +1,4 @@
 -std=c++26
 -I.
+-Ibazel-out/../external/catch2+/src
+-Ibazel-bin/external/catch2+/_virtual_includes/catch2_generated

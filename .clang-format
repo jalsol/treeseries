@@ -2,4 +2,4 @@
 BasedOnStyle: Google
 Standard: Latest
 # Google style's 80 is too narrow for this codebase.
-ColumnLimit: 120
+ColumnLimit: 100

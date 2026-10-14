@@ -1,1 +1,41 @@
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_test(
+    name = "mem_free_queue_test",
+    size = "small",
+    srcs = ["mem_free_queue_test.cpp"],
+    deps = [
+        "//treeseries:treeseries",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_test(
+    name = "disk_free_queue_test",
+    size = "small",
+    srcs = ["disk_free_queue_test.cpp"],
+    deps = [
+        "//treeseries:treeseries",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_test(
+    name = "slab_file_test",
+    size = "small",
+    srcs = ["slab_file_test.cpp"],
+    deps = [
+        "//treeseries:treeseries",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_test(
+    name = "treeseries_test",
+    size = "small",
+    srcs = ["treeseries_test.cpp"],
+    deps = [
+        "//treeseries:treeseries",
+        "@catch2//:catch2_main",
+    ],
+)
