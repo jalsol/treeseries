@@ -36,16 +36,23 @@ class MemFullQueue {
   }
 
   [[nodiscard]] auto TryPop(SlabId* slab_id) -> bool {
-    auto& cell = cells_[head_ & kMask];
+    const auto pos = head_.load(std::memory_order_relaxed);
+    auto& cell = cells_[pos & kMask];
 
-    if (cell.sequence.load(std::memory_order_acquire) != head_ + 1u) {
+    if (cell.sequence.load(std::memory_order_acquire) != pos + 1u) {
       return false;
     }
 
     *slab_id = cell.data.load(std::memory_order_relaxed);
-    cell.sequence.store(head_ + kMemSlabCount, std::memory_order_release);
-    ++head_;
+    cell.sequence.store(pos + kMemSlabCount, std::memory_order_release);
+    head_.store(pos + 1u, std::memory_order_relaxed);
     return true;
+  }
+
+  // Only the migrating thread consumes, so producers get a size good enough
+  // for a migration threshold without touching the cells.
+  [[nodiscard]] auto Size() const -> std::uint32_t {
+    return tail_.load(std::memory_order_relaxed) - head_.load(std::memory_order_relaxed);
   }
 
  private:
@@ -58,5 +65,5 @@ class MemFullQueue {
 
   std::array<Cell, kMemSlabCount> cells_;
   alignas(kCacheLineSize) std::atomic<std::uint32_t> tail_{};
-  alignas(kCacheLineSize) std::uint32_t head_{};
+  alignas(kCacheLineSize) std::atomic<std::uint32_t> head_{};
 };

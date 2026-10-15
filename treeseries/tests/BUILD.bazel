@@ -51,8 +51,23 @@ cc_test(
 )
 
 cc_test(
+    name = "tree_index_test",
+    size = "small",
+    srcs = ["tree_index_test.cpp"],
+    deps = [
+        "//treeseries:treeseries",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_test(
     name = "treeseries_test",
     size = "small",
+    # Every engine maps and prefaults the whole slab buffer, so the suite is
+    # heavy in absolute terms even though each case is tiny.
+    timeout = "moderate",
+    # ...and 2 GiB per engine is not something to do several at a time.
+    tags = ["exclusive"],
     srcs = ["treeseries_test.cpp"],
     deps = [
         "//treeseries:treeseries",

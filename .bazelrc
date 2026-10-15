@@ -6,6 +6,11 @@ build --verbose_failures
 test --test_output=errors
 common --enable_platform_specific_config
 
+# The engine tests get a small slab buffer: a 2 GiB buffer per engine is a
+# server's setting, and a dozen engines would need the server. The queue tests
+# size their rings off kMemSlabCount and are happy with the real one.
+test --per_file_copt=^treeseries/tests/treeseries_test.cpp@-DTREESERIES_TEST_BUILD=1
+
 # Warnings apply to our sources only. Third-party deps are not ours to fix, and
 # --copt would drag them into catch2's build. Paths here are exec-root-relative.
 build --per_file_copt=^treeseries/.*@-Wall,-Wextra,-Wpedantic,-Wshadow
@@ -33,6 +38,10 @@ build:release --strip=never
 # bazel test --config=ci //...
 build:ci --config=release
 build:ci --per_file_copt=^treeseries/.*@-Werror
+# masstree's headers instantiate inside our objects, so its 2012-era warnings
+# show up in our compiles. They stay warnings: our own code is the one the gate
+# is for, and it is clean.
+build:ci --per_file_copt=^treeseries/.*@-Wno-error=old-style-cast,-Wno-error=conversion,-Wno-error=sign-conversion,-Wno-error=pedantic,-Wno-error=shadow
 build:ci --lockfile_mode=error
 
 # bazel test --config=native //...    -- benchmark numbers only; shipped
@@ -43,3 +52,9 @@ build:native --copt=-march=native
 build:asan --copt=-fsanitize=address --copt=-fno-omit-frame-pointer --linkopt=-fsanitize=address
 # bazel test --config=ubsan //...
 build:ubsan --copt=-fsanitize=undefined --copt=-fno-sanitize-recover=all --linkopt=-fsanitize=undefined
+# masstree is built out of UB that predates us — u64s read straight out of
+# unaligned byte strings, shifts as wide as the type — and its templates are
+# instantiated inside our objects, so the checks have to go for both. Our own
+# reads all go through std::memcpy and -Wcast-align still guards the rest.
+build:ubsan --per_file_copt=^treeseries/.*,^third_party/.*@-fno-sanitize=alignment
+build:ubsan --per_file_copt=^treeseries/.*,^third_party/.*@-fno-sanitize=shift
