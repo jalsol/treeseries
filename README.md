@@ -1,8 +1,18 @@
+how the fuck did this paper get published? if anyone wants to implement
+database papers, maybe look into those from TU Munich. They are goated.
+
 # treeseries
 
 C++26 implementation of TreeSeries from *PromTCS: An Efficient
 Two-Dimensional Metadata Management and Tailored Hybrid Storage Architecture
 for Performance Monitoring Time Series* ([FAST '27][paper]).
+
+At first, this implementation was done manually (AI only involved in planning
+and enforcing tests). However, once I dug deeper into the finer details, I
+basically gave up and use AI to accelerate the completion of this project.
+
+Some stuff are stripped because I'm not interested (e.g. HDD support). Some
+stuff are simplified because the authors were straight up stupid.
 
 ## Build
 
