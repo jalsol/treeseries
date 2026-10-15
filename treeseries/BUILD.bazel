@@ -1,8 +1,14 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 # Umbrella target: one name to depend on, so consumers don't track subpackages.
+# masstree_globals carries the mrcu/epoch definitions masstree leaves to its
+# consumer; alwayslink inside it keeps them in the link.
 cc_library(
     name = "treeseries",
     hdrs = glob(["*.hpp"]),
     visibility = ["//visibility:public"],
+    deps = [
+        "//third_party:masstree_globals",
+        "//third_party:masstree_wrapper",
+    ],
 )

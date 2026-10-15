@@ -1,0 +1,2 @@
+# Vendored code keeps its own formatting; CI's clang-format check passes over it.
+DisableFormat: true
