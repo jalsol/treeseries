@@ -13,7 +13,9 @@
 
 #include "treeseries/common.hpp"
 #include "treeseries/disk_free_queue.hpp"
+#include "treeseries/mem_evict_queue.hpp"
 #include "treeseries/mem_free_queue.hpp"
+#include "treeseries/mem_full_queue.hpp"
 #include "treeseries/metahash.hpp"
 #include "treeseries/slab_file.hpp"
 
@@ -27,6 +29,8 @@ class TreeSeries {
       : slab_buffer_{MapBuffer()},
         slab_file_{*slab_file},
         disk_free_queue_{DiskFreeQueue::Restored(*slab_file, first_free)},
+        mem_full_queue_{std::make_unique<MemFullQueue>()},
+        mem_evict_queue_{std::make_unique<MemEvictQueue>()},
         meta_hash_{std::make_unique<MetaHash>()} {}
 
   TreeSeries(const TreeSeries&) = delete;
@@ -77,10 +81,10 @@ class TreeSeries {
   SlabFile& slab_file_;
 
   // NOTE: I'm not supporting HDD, thus DiskFullQueue and DiskEvictQueue should be eliminated.
-  // MemFullQueue: MPSC
-  // MemEvictQueue: SPMC
   DiskFreeQueue disk_free_queue_;
   MemFreeQueue mem_free_queue_;
+  std::unique_ptr<MemFullQueue> mem_full_queue_;
+  std::unique_ptr<MemEvictQueue> mem_evict_queue_;
 
   std::unique_ptr<MetaHash> meta_hash_;
 };
