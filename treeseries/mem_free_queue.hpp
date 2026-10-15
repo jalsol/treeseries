@@ -6,17 +6,18 @@
 #include <utility>
 
 #include "treeseries/common.hpp"
+#include "treeseries/slab.hpp"
 
 class MemFreeQueue {
  public:
-  [[nodiscard]] auto TryPop() -> std::optional<std::uint32_t> {
+  [[nodiscard]] auto TryPop() -> std::optional<SlabId> {
     if (exhausted_.load(std::memory_order_relaxed)) {
       return std::nullopt;
     }
 
     const auto id = next_.fetch_add(1, std::memory_order_relaxed);
     if (id < kMemSlabCount) {
-      return id;
+      return SlabId{id};
     }
 
     exhausted_.store(true, std::memory_order_relaxed);
@@ -24,7 +25,7 @@ class MemFreeQueue {
   }
 
   [[nodiscard]] auto TryPopBlock(std::uint32_t quantity)
-      -> std::optional<std::pair<std::uint32_t, std::uint32_t>> {
+      -> std::optional<std::pair<SlabId, std::uint32_t>> {
     if (quantity == 0) {
       return std::nullopt;
     }
@@ -33,7 +34,7 @@ class MemFreeQueue {
     while (current < kMemSlabCount) {
       const auto count = std::min(quantity, kMemSlabCount - current);
       if (next_.compare_exchange_weak(current, current + count, std::memory_order_relaxed)) {
-        return std::pair{current, count};
+        return std::pair{SlabId{current}, count};
       }
     }
 

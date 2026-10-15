@@ -22,6 +22,9 @@
 using timestamp = std::uint64_t;
 
 class TreeSeries {
+  // Lets the tests read slab bytes and queue membership back; neither is public API.
+  friend struct TreeSeriesTestAccess;
+
  public:
   explicit TreeSeries(SlabFile* slab_file) : TreeSeries{slab_file, 0} {}
 
@@ -36,15 +39,38 @@ class TreeSeries {
   TreeSeries(const TreeSeries&) = delete;
   TreeSeries& operator=(const TreeSeries&) = delete;
 
-  auto Put(std::uint64_t source_id, std::uint16_t metric_id, std::span<std::byte>) {
+  auto Put(std::uint64_t source_id, std::uint16_t metric_id, std::span<std::byte> chunk) {
+    if (chunk.size() != kChunkSize) {
+      throw std::runtime_error(
+          std::format("TreeSeries: chunk is {} bytes, expected {}", chunk.size(), kChunkSize));
+    }
+
     auto& item = meta_hash_->GetItemFor(metric_id, source_id);
     std::scoped_lock lock(item.mutex);
 
     if (item.slab_id == SlabId::kInvalid) {
-      // TODO
+      const auto slab_id = mem_free_queue_.TryPop();
+      if (slab_id.has_value()) {
+        item.slab_id = slab_id.value();
+      } else {
+        while (!mem_evict_queue_->TryPop(&item.slab_id));
+      }
+      item.used = 0;
     }
 
-    // TODO:
+    // get slab info
+    const auto slot = SlabBytes(item.slab_id).subspan(item.used * kItemSize, kItemSize);
+
+    // write slab
+    std::memcpy(slot.data(), &source_id, kSourceIdSize);
+    std::memcpy(slot.data() + kSourceIdSize, &metric_id, kMetricIdSize);
+    std::memcpy(slot.data() + kSourceIdSize + kMetricIdSize, chunk.data(), kChunkSize);
+
+    ++item.used;
+    if (item.used == kItemsPerSlab) {
+      mem_full_queue_->Push(item.slab_id);
+      item.slab_id = SlabId::kInvalid;
+    }
   }
 
   auto Get(std::uint64_t, std::uint16_t, timestamp, timestamp) -> std::vector<Chunk> {
@@ -75,6 +101,11 @@ class TreeSeries {
     }
 
     return std::unique_ptr<std::byte, MappingDeleter>{mapping};
+  }
+
+  [[nodiscard]] auto SlabBytes(SlabId slab_id) const -> std::span<std::byte, kSlabSize> {
+    const auto offset = static_cast<std::size_t>(slab_id) * kSlabSize;
+    return std::span<std::byte, kSlabSize>{slab_buffer_.get() + offset, kSlabSize};
   }
 
   std::unique_ptr<std::byte, MappingDeleter> slab_buffer_;

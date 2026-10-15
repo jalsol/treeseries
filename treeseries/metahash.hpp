@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <mutex>
 
 #include "treeseries/slab.hpp"
@@ -12,6 +13,7 @@ struct MetaHash {
   struct Item {
     mutable std::mutex mutex;
     SlabId slab_id = SlabId::kInvalid;
+    std::uint32_t used = 0;
   };
 
   Item& GetItemFor(auto metric_id, auto source_id) {
